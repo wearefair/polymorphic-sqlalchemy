@@ -55,7 +55,7 @@ The Polymorphic extension is written to manage relationship such as above. So yo
 
 # How to use Polymorphic Extension
 
-[Take a look at the tutorial](#tutorial.md)
+[Take a look at the tutorial](tutorial.md)
 
 # Reference
 
