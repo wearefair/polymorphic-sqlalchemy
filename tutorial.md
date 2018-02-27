@@ -61,16 +61,15 @@ class Vehicle(db.Model):
 HasVehicle = create_polymorphic_base(data_class=Vehicle, ...)
 
 
-class Org(BaseInitializer, db.Model, HasVehicle):
+class Org(db.Model, HasVehicle):
     __tablename__ = "org"
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-class Dealer(BaseInitializer, db.Model, HasVehicle):
+class Dealer(db.Model, HasVehicle):
     __tablename__ = "dealer"
     id = Column(Integer, primary_key=True, autoincrement=True)
 ```
 
-You might wonder what is that BaseInitializer doing. It is there to make sure the SQLAlchemy fields are initialized before the Polymorphic fields (such as PolyField are initialized.)
 
 ## 2. Define the PolyField
 
@@ -94,14 +93,17 @@ class Vehicle(BaseInitializer, db.Model):
 
 HasVehicle = create_polymorphic_base(data_class=Vehicle, data_class_attr='source')
 
-class Org(BaseInitializer, db.Model, HasVehicle):
+class Org(db.Model, HasVehicle):
     __tablename__ = "org"
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-class LocalDealer(BaseInitializer, db.Model, HasVehicle):
+class LocalDealer(db.Model, HasVehicle):
     __tablename__ = "dealer"
     id = Column(Integer, primary_key=True, autoincrement=True)
 ```
+
+
+You might wonder what is that BaseInitializer doing. It is there to make sure the SQLAlchemy fields are initialized before the Polymorphic fields (such as PolyField are initialized.)
 
 At this point you can use this relationship!
 
@@ -118,19 +120,39 @@ vehicle2 = Vehicle(source=dealer1)
 vehicle3 = Vehicle(source=org1)
 vehicle4 = Vehicle(source=org1)
 
->>> vehicle1.source == org1
-True
->>> vehicle1.source_id == 1
-True
->>> vehicle2.source_type == 'local_dealer'
-True
->>> org1.vehicles == [vehicle1, vehicle3, vehicle4]
-True
+>>> vehicle1.source
+<org id: 1>
+>>> vehicle1.source_id
+1
+>>> vehicle2.source_type
+local_dealer
+>>> org1.vehicles
+[<vehicle id:1>, <vehicle id:3>, <vehicle id:4>]
 ```
 
 ## 3. NetRelationship for network backed models
 
-The NetRelationship is used to define a network backed (or technically a non-SQLAlchemy) relationship. An example of it would be if the dealers table exists in another microservice and we have created a python model that provides the abstraction.
+Once you start getting into the microservices architecture, you will soon find that deciding the boundaries of services data becomes a difficult problem.
+
+Let's say you have a Service 1 and that deals with vehicle and organizations and service 2 that deals with dealers. The first choice that you might make is to share the database between the 2 services.
+
+
+```
+             ░            SHARED DATABASE           ░
+             ░  ┏━━━━━━━━━━━━━┓                     ░
+             ░  ┃Vehicle Table┃    ┏━━━━━━━━━━━━━┓  ░
+             ░  ┣━━━━━━━━━━━━━┫    ┃  Org Table  ┃  ░
+ Service 1   ░  ┃ 1 BMW 3     ┃----┗━━━━━━━━━━━━━┛  ░   Service 2
+             ░  ┣━━━━━━━━━━━━━┫    ┏━━━━━━━━━━━━━┓  ░
+             ░  ┃ 2 Tesla S   ┃----┃Dealer Table ┃  ░
+             ░  ┗━━━━━━━━━━━━━┛    ┗━━━━━━━━━━━━━┛  ░
+             ░                                      ░
+```
+
+
+But that makes your services heavily coupled and the single database very quickly becomes your bottleneck. What is recommended is to have a separate database per service and only keep the IDs from the other services in your own database as if you were having foreign key relationships to those tables. Then design API endpoints to fetch the appropriate data from the other services. We call these network backed models.
+
+The NetRelationship is used to define these network backed (or technically a non-SQLAlchemy) relationships.
 
 ```
                    Service 1        ░                   ░    Service 2
@@ -144,7 +166,7 @@ The NetRelationship is used to define a network backed (or technically a non-SQL
                                     ░                   ░
 ```
 
-A simple example of it is if the dealer table was served by a separate service and we need to hit its API to get the object:
+A simple example network backed dealers model:
 
 ```py
 class Dealer:
@@ -193,12 +215,18 @@ vehicle3 = Vehicle(source=org1)
 vehicle4 = Vehicle(source=org1)
 vehicle5 = Vehicle(source=dealer2)
 
-assert vehicle1.source == org1
-assert vehicle1.source_id == 1
-assert vehicle2.source_type == 'local_dealer'
-assert org1.vehicles == [vehicle1, vehicle3, vehicle4]
-assert vehicle5.source == dealer2
-assert vehicle5.source_type == 'dealer'
+>>> vehicle1.source
+<org id:1>
+>>> vehicle1.source_id
+1
+>>> vehicle2.source_type
+local_dealer
+>>> org1.vehicles
+[<vehicle id:1>, <vehicle id:3>, <vehicle id:4>]
+>>> vehicle5.source
+<dealer id:2>
+>>> vehicle5.source_type
+dealer
 ```
 
 
@@ -210,18 +238,21 @@ Relation is a named tuple that takes optionally the following arguments:
 
 `data_class, data_class_attr, ref_class_attr`
 
-You might wonder why you even need this. Let's go back to the example. We know the source of each vehicle. But what if we want to know who bought the vehicle and who sold it. The buyer and the seller both could be organiaations or dealers or something else. In that case defining the following Polyfields is **not** enough:
+You might wonder why you even need this. Let's go back to the example. Previously we had a source field for each vehicle. The source could be an organization or a dealer. But what if we want to know who bought the vehicle and who sold it? The buyer and the seller both could be organiations or dealers.
 
 ```py
-class Vehicle(BaseInitializer, db.Model):
-    __tablename__ = "vehicle"
+class Records(BaseInitializer, db.Model):
+    __tablename__ = "records"
+
     id = Column(Integer, primary_key=True, autoincrement=True)
-    source_id = Column(String(50), nullable=False)
-    source_type = Column(String(50), nullable=False)
-    source = PolyField(prefix='source')
-    source__dealer = NetRelationship(prefix='source', _class=Dealer)
+    buyer_id = Column(String(50), nullable=False)
+    buyer_type = Column(String(50), nullable=False)
     buyer = PolyField(prefix='buyer')
+    buyer__dealer = NetRelationship(prefix='buyer', _class=Dealer)
+    seller_id = Column(String(50), nullable=False)
+    seller_type = Column(String(50), nullable=False)
     seller = PolyField(prefix='seller')
+    seller__dealer = NetRelationship(prefix='seller', _class=Dealer)
 ```
 
 What we need is to explicitly define the relationships in the `create_polymorphic_base`.
@@ -232,52 +263,64 @@ relations = (
     Relation(data_class=Records, data_class_attr='seller', ref_class_attr='seller_records')
 )
 
-HasVehicle = create_polymorphic_base(relations=relations)
-```
+HasRecord = create_polymorphic_base(relations=relations)
 
-And if you want the buyer or seller to be able to be network backed objects too, you add the NetRelationship fields:
 
-```py
-class Vehicle(BaseInitializer, db.Model):
-    __tablename__ = "vehicle"
+class Org(db.Model, HasRecord):
+    __tablename__ = "org"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    source_id = Column(String(50), nullable=False)
-    source_type = Column(String(50), nullable=False)
-    source = PolyField(prefix='source')
-    source__dealer = NetRelationship(prefix='source', _class=Dealer)
-    buyer = PolyField(prefix='buyer')
-    buyer__dealer = NetRelationship(prefix='source', _class=Dealer)
-    seller = PolyField(prefix='seller')
-    seller__dealer = NetRelationship(prefix='source', _class=Dealer)
 ```
 
 Now you can:
 
 ```py
-org1 = Org()
-dealer1 = LocalDealer()  # SQLAlchemy model
-dealer2 = Dealer.find(id=3)  # Network backed model
-db.session.add(org1)
-db.session.add(dealer1)
-# We flush to get the ID of org1 and dealer1
-db.session.flush()
+dealer1 = Dealer(1)
+dealer2 = Dealer(2)
 
-vehicle1 = Vehicle(source=org1)
-vehicle2 = Vehicle(source=dealer1)
-vehicle3 = Vehicle(source=org1)
-vehicle4 = Vehicle(source=org1)
-vehicle5 = Vehicle(source=dealer2)
+org1 = Org(id=1)
+org2 = Org(id=2)
 
->>> vehicle1.source == org1
+# we specify the IDs here so we don't need to flush to db yet to get the ID
+rec1 = Records(buyer=org1, seller=dealer2, id=1)
+rec2 = Records(buyer=org1, seller=org2, id=2)
+rec3 = Records(buyer=dealer1, seller=dealer2, id=3)
+rec4 = Records(buyer=dealer1, seller=org1, id=4)
+
+>>> rec1.buyer_type
+org
+>>> rec1.buyer_id
+1
+>>> rec1.buyer is org1
 True
->>> vehicle1.source_id == 1
+>>> org1.buyer_records
+[rec1, rec2, rec5]
+>>> org1.seller_records
+[rec4]
+
+# The cache for Network backed model is properly invalidated
+>>> rec3.buyer is dealer1
 True
->>> vehicle2.source_type == 'local_dealer'
+>>> rec3.buyer_id = 2
+>>> rec3.buyer == dealer2
 True
->>> org1.vehicles == [vehicle1, vehicle3, vehicle4]
+# The identity check fails because the cache was invalidated and we used the `find` function to grab a new copy of dealer2
+>>> rec3.buyer is dealer2
+False
+
+
+# The cache for SQLAlchemy objects is not properly invalidated
+>>> rec1.buyer_id = 2
+# NOTE: This is a bug. A solution might be to use SQLAlchemy events to update the object.
+# The problem is that setting the object will again update the fields which causes an infinite loop.
+>>> rec1.buyer is org1  # but it should be org2 since we updated the buyer_id
 True
->>> vehicle5.source == dealer2
+
+# The opposite of it is true too and is a bug.
+# If the reference object gets modified and it is already set in the data model,
+# the values do not update.
+org1.id = 20
+>>> rec2.buyer is org1
 True
->>> vehicle5.source_type == 'dealer'
-True
+>>> rec2.buyer_id == org1.id
+False
 ```

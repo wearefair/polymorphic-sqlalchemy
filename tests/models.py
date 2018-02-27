@@ -1,9 +1,9 @@
 import logging
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from polymorphic_sqlalchemy import (create_polymorphic_base, generate_polymorphic_listener, Relation,
+from polymorphic_sqlalchemy import (create_polymorphic_base, Relation,
                                     PolyField, NetRelationship, NetModel, BaseInitializer)
-from sqlalchemy import Column, Integer, String, event
+from sqlalchemy import Column, Integer, String
 
 test_app = Flask(__name__)
 test_app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
@@ -46,28 +46,7 @@ class LocalDealer(BaseInitializer, db.Model, HasVehicle):
     id = Column(Integer, primary_key=True, autoincrement=True)
 
 
-class HasVehicleAssetTransfer:
-    pass
-
-
-class Org(db.Model, HasVehicleAssetTransfer, HasVehicle):
-    __tablename__ = "org"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-
-    def __repr__(self):
-        return '< Org id: {} >'.format(self.id)
-
-
-class Company(BaseInitializer, db.Model, HasVehicleAssetTransfer):
-    __tablename__ = "company"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    dealer_id = Column(Integer, nullable=False)
-    dealer = NetModel(field='dealer_id', _class=Dealer)
-
-
-class Records(db.Model):
+class Records(BaseInitializer, db.Model):
     __tablename__ = "records"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -80,26 +59,30 @@ class Records(db.Model):
     buyer = PolyField(prefix='buyer')
     seller = PolyField(prefix='seller')
 
-    def __init__(self, *args, **kwargs):
-        seller = kwargs.pop('seller', None)
-        buyer = kwargs.pop('buyer', None)
-        super().__init__(*args, **kwargs)
-        if seller:
-            self.seller = seller
-        if buyer:
-            self.buyer = buyer
-
-    def __repr__(self):
-        return '< Records id: {} >'.format(self.id)
-
 
 relations = (
     Relation(data_class=Records, data_class_attr='buyer', ref_class_attr='buyer_records'),
     Relation(data_class=Records, data_class_attr='seller', ref_class_attr='seller_records')
 )
 
-setup_listener = generate_polymorphic_listener(relations=relations)
-event.listen(HasVehicleAssetTransfer, 'mapper_configured', setup_listener, propagate=True)
+HasRecord = create_polymorphic_base(relations=relations)
+
+
+class Org(db.Model, HasRecord, HasVehicle):
+    __tablename__ = "org"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    def __repr__(self):
+        return '< Org id: {} >'.format(self.id)
+
+
+class Company(BaseInitializer, db.Model, HasRecord):
+    __tablename__ = "company"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    dealer_id = Column(Integer, nullable=False)
+    dealer = NetModel(field='dealer_id', _class=Dealer)
 
 
 class VehicleReferencePrice(BaseInitializer, db.Model):

@@ -44,12 +44,13 @@ class TestPolymorphicGenerator:
         assert rec1.buyer is org1
         assert org1.buyer_records == [rec1, rec2, rec5]
         assert org1.seller_records == [rec4]
-        assert rec3.buyer is dealer1
         assert rec5.seller is company1
 
+        # The cache for Network backed model is properly invalidated
+        assert rec3.buyer is dealer1
         rec3.buyer_id = 2
-        rec3_buyer = rec3.buyer
-        assert rec3_buyer == dealer2
+        assert rec3.buyer is not dealer2  # It is a new object so the identity check fails
+        assert rec3.buyer == dealer2
 
         rec1.buyer_id = 2
         # NOTE: This is a bug. A solution might be to use SQLAlchemy events to update the object.
