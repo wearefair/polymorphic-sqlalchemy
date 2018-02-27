@@ -234,7 +234,7 @@ assert rec3.buyer is dealer1
 
 ```py
 class SourceOfData(db.Model):
-    __tablename__ = 'juices'
+    __tablename__ = 'source_of_data'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     filter_type = Column(String(16), nullable=False)
