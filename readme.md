@@ -35,7 +35,23 @@ And now you want to know what the source of each row was. You could start by sim
 
 But once you have many different sources of data, this approach quickly becomes unmanageable.
 
-Now imagine if you are using a microservice architecture so your vehicle model and org model live on the same database but some other microservice has the dealer table.
+Now imagine if you are using a microservice architecture. Sometimes people have microservices that share the database:
+
+```
+
+
+             ░            SHARED DATABASE           ░
+             ░  ┏━━━━━━━━━━━━━┓                     ░
+             ░  ┃Vehicle Table┃    ┏━━━━━━━━━━━━━┓  ░
+             ░  ┣━━━━━━━━━━━━━┫    ┃  Org Table  ┃  ░
+ Service 1   ░  ┃ 1 BMW 3     ┃----┗━━━━━━━━━━━━━┛  ░   Service 2
+             ░  ┣━━━━━━━━━━━━━┫    ┏━━━━━━━━━━━━━┓  ░
+             ░  ┃ 2 Tesla S   ┃----┃Dealer Table ┃  ░
+             ░  ┗━━━━━━━━━━━━━┛    ┗━━━━━━━━━━━━━┛  ░
+             ░                                      ░
+```
+
+But that is not recommended. You want your microservices to be loosely coupled. It is a bad idea to have shared resource. So we separate the vehicle model and org model to live on the same database for service 1 but some other microservice has the dealer table.
 
 
 ```
