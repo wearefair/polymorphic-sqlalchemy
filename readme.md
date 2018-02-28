@@ -262,6 +262,61 @@ class NewsData(SourceOfData, HasVehicle):
 Note that `HasVehicle` is subclassed by the `AdsData` and `NewsData` but NOT by their superclass, `SourceOfData`.
 
 
+# Behind the scene
+
+Going back to this model:
+
+```py
+class Dealer:
+    """ Dealer model for the dealers table (pseudo) """
+
+    def __init__(self, id):
+        self.id = id
+
+    @classmethod
+    def find(cls, id):
+        return cls(id)
+
+    def __eq__(self, other):
+        return self.id == other.id
+
+    def __repr__(self):
+        return '< Dealer id: {} >'.format(self.id)
+
+
+class Vehicle(BaseInitializer, db.Model):
+    __tablename__ = "vehicle"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    source_id = Column(String(50), nullable=False)
+    source_type = Column(String(50), nullable=False)
+    source = PolyField(prefix='source')
+    source__dealer = NetRelationship(prefix='source', _class=Dealer)
+
+HasVehicle = create_polymorphic_base(data_class=Vehicle, data_class_attr='source')
+
+
+class LocalDealer(BaseInitializer, db.Model, HasVehicle):
+    __tablename__ = "local_dealer"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+```
+
+The vehicle model has the following attributes defined above:
+
+```
+id
+source_id
+source_type
+source
+source__dealer
+```
+
+The Polymorphic extension automatically adds the following attributes to the Vehicle model:
+
+```
+source__local_dealer  # A SQLAlchemy relationship to the local dealer table
+```
+
+Then when you ask for the source attribute which is a Polyfield, it grabs the source_type's content (let's say 'local_dealer') and the prefix ('source') and uses a delimiter to combine them. The delimiter is double underscore so the combination becomes 'source__local_dealer'. As you know `source__local_dealer` is a SQLAlchemy relationship that the create_polymorphic_base has already built for us. The Polyfield then returns the value of `source__local_dealer`. So in this case it just returns the SQLAlchemy relationship. But what if the `source_type` is a network backed item like `dealer` then what it tries to return is the value of `source__dealer`. And we have manually set the `source_dealer` to be a NetRelationship field in the model. The NetRelationship then goes and runs the `find` on the Dealer model and grabs the object. Then it caches it in `_source__dealer` so the next time you ask for it, it does not need to hit an external API. The cache gets invalidated if the `source_id` or `source_type` fields get modified. Hence the cache is invalidated properly. But when it comes to SQLAlchemy relationships, as you can see in the [Known Limitations and Bugs](#known-limitations-and-bugs), the relationship is not automatically updated to point to the correct object.
 
 # Coming from older generate_polymorphic_listener_function
 
