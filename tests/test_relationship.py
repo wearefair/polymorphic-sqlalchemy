@@ -1,5 +1,6 @@
 from models import (db, Dealer, LocalDealer, Company, Org, Records, VehicleReferencePrice,
-                    FairEstimatedValue, SomeRecord, Vehicle, AdsData, NewsData)
+                    FairEstimatedValue, SomeRecord, Vehicle, AdsData, NewsData, PredictedResidual,
+                    FairEstimatedValueB, VehicleReferencePriceSource)
 
 
 class TestBaseInitializer:
@@ -144,3 +145,17 @@ class TestInheritence:
         assert news1.vehicles == [vehicle3]
         db.session.flush()
         db.session.rollback()
+
+
+class TestJoinTableInheritence:
+
+    def test_joint_table_inheritence(self):
+        db.create_all()
+        pr = PredictedResidual()
+        db.session.add(pr)
+        db.session.flush()
+        fev = FairEstimatedValueB()
+        fev.sources.append(pr)
+        veh_ref_price_source = db.session.query(VehicleReferencePriceSource).one()
+        assert veh_ref_price_source.vehicle_reference_price.id == 1
+        assert fev.sources == [pr]

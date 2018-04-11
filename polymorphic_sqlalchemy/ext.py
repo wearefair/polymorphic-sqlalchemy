@@ -9,12 +9,12 @@ logger = logging.getLogger(__name__)
 DELIMITER = '__'
 
 Relation = namedtuple_with_defaults(
-    'Relation', 'data_class ref_class data_class_attr ref_class_attr data_class_proxy_attr ' +\
+    'Relation', 'data_class ref_class data_class_attr ref_class_attr data_class_proxy_attr ' +
                 'ref_class_name data_class_alchemy_attr ref_class_attr_name')
 
 
 def create_polymorphic_base(data_class=None, data_class_attr=None,
-                                ref_class_attr=None, data_class_proxy_attr=None, relations=None):
+                            ref_class_attr=None, data_class_proxy_attr=None, relations=None):
     """
     Shortcut for generate_polymorphic_listener
     """
@@ -36,7 +36,7 @@ def create_polymorphic_base(data_class=None, data_class_attr=None,
 
 
 def generate_polymorphic_listener_function(belongs_to_class, belongs_to_association,
-    has_many_name = None, association_proxy_name = None):
+                                           has_many_name=None, association_proxy_name=None):
     """
     Old way of using polymorphic relations
     """
@@ -45,6 +45,7 @@ def generate_polymorphic_listener_function(belongs_to_class, belongs_to_associat
                         ref_class_attr=has_many_name, data_class_proxy_attr=association_proxy_name)
     relations = (relation,)
     return generate_polymorphic_listener(relations=relations, new_format=False)
+
 
 def generate_polymorphic_listener(relations=None, new_format=True):
 
@@ -173,7 +174,7 @@ class NetRelationship:
             if obj.id != prefix_id_content:
                 obj = self._get_and_set_obj(instance, prefix_id_content)
         else:
-             obj = self._get_and_set_obj(instance, prefix_id_content)
+            obj = self._get_and_set_obj(instance, prefix_id_content)
 
         return obj
 
@@ -200,7 +201,6 @@ class NetRelationship:
             setattr(instance, self.prefixed, value)
         else:
             logger.error('{} and {} do not match for setting {}'.format(value_class_name, self._class_name, self.prefixed))
-
 
 
 class NetModel(NetRelationship):
@@ -277,4 +277,3 @@ class BaseInitializer:
         name = getattr(self, 'name', False)
         name = ' name: {}'.format(name) * bool(name)
         return '<{}{}{}>'.format(self.__class__.__name__, id_, name)
-
