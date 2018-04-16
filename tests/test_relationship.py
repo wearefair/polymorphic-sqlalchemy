@@ -1,6 +1,6 @@
 from models import (db, Dealer, LocalDealer, Company, Org, Records, VehicleReferencePrice,
                     FairEstimatedValue, SomeRecord, Vehicle, AdsData, NewsData, PredictedResidual,
-                    FairEstimatedValueB, VehicleReferencePriceSource)
+                    FairEstimatedValueB, VehicleReferencePriceSource, BMWVehicles)
 
 
 class TestBaseInitializer:
@@ -159,3 +159,19 @@ class TestJoinTableInheritence:
         veh_ref_price_source = db.session.query(VehicleReferencePriceSource).one()
         assert veh_ref_price_source.vehicle_reference_price.id == 1
         assert fev.sources == [pr]
+
+
+class TestWhenSourceTypeStatic:
+
+    def test_source_type_static(self):
+        db.create_all()
+        dealer1 = Dealer(1)
+
+        bmw_veh1 = BMWVehicles(source=dealer1)
+        bmw_veh2 = BMWVehicles(source=dealer1)
+        db.session.add(bmw_veh1)
+        db.session.add(bmw_veh2)
+        db.session.flush()
+        dealer1_vehicles = db.session.query(BMWVehicles).order_by(BMWVehicles.source_id).all()
+        assert dealer1_vehicles == [bmw_veh1, bmw_veh2]
+        assert dealer1_vehicles[0].source == dealer1

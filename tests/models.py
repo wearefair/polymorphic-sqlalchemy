@@ -44,6 +44,9 @@ HasVehicle = create_polymorphic_base(data_class=Vehicle, data_class_attr='source
 
 
 class LocalDealer(BaseInitializer, db.Model, HasVehicle):
+    """
+    Local Dealer means dealer table that is locally in our database
+    """
     __tablename__ = "local_dealer"
     id = Column(Integer, primary_key=True, autoincrement=True)
 
@@ -185,3 +188,21 @@ class PredictedResidual(BaseInitializer, db.Model, HasVehicleReferencePrices):
     __tablename__ = "predicted_residuals"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+
+# ---------- When source_type does not chnage --------------
+
+
+class BMWVehicles(BaseInitializer, db.Model):
+    __tablename__ = "bmw_vehicles"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    source_id = Column(String(50), nullable=False)
+    source_type = 'dealer'
+    source = PolyField(prefix='source')
+    source__dealer = NetRelationship(prefix='source', _class=Dealer)
+
+# HasBMWVehicle = create_polymorphic_base(data_class=BMWVehicles, data_class_attr='source')
+
+
+# class BMWDealer(BaseInitializer, db.Model, HasBMWVehicle):
+#     __tablename__ = "bmw_dealer"
+#     id = Column(Integer, primary_key=True, autoincrement=True)
