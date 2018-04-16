@@ -190,6 +190,7 @@ class PredictedResidual(BaseInitializer, db.Model, HasVehicleReferencePrices):
     id = Column(Integer, primary_key=True, autoincrement=True)
 
 # ---------- When source_type does not chnage --------------
+# NOTE: instead of using net relationship in this case, you should use NetModel!
 
 
 class BMWVehicles(BaseInitializer, db.Model):
@@ -199,10 +200,3 @@ class BMWVehicles(BaseInitializer, db.Model):
     source_type = 'dealer'
     source = PolyField(prefix='source')
     source__dealer = NetRelationship(prefix='source', _class=Dealer)
-
-# HasBMWVehicle = create_polymorphic_base(data_class=BMWVehicles, data_class_attr='source')
-
-
-# class BMWDealer(BaseInitializer, db.Model, HasBMWVehicle):
-#     __tablename__ = "bmw_dealer"
-#     id = Column(Integer, primary_key=True, autoincrement=True)
