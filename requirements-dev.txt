@@ -1,4 +1,4 @@
 -r requirements.txt
-Flask==0.12.2
+Flask==0.12.4
 Flask-SQLAlchemy==2.1
 pytest==3.0.6
