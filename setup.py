@@ -19,6 +19,7 @@ setup(name='polymorphic_sqlalchemy',
                      'Flask-SQLAlchemy==2.4.0',
                      'pytest==4.5.0', ],
       long_description=long_description,
+      long_description_content_type='text/markdown',
       install_requires=[
           'SQLAlchemy',
           'inflection'
