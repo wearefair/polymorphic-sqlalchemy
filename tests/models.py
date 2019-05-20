@@ -9,6 +9,7 @@ from sqlalchemy.ext.associationproxy import association_proxy
 
 test_app = Flask(__name__)
 test_app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
+test_app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(test_app)
 
 

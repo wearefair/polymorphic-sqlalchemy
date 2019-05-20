@@ -7,7 +7,7 @@ except:
     long_description = "Polymorphic relations for SQLAlchemy"
 
 setup(name='polymorphic_sqlalchemy',
-      version='0.2.6',
+      version='0.2.7',
       description='Polymorphic relations for SQLAlchemy',
       url='https://github.com/wearefair/polymorphic-sqlalchemy',
       author='Seperman',
@@ -15,9 +15,9 @@ setup(name='polymorphic_sqlalchemy',
       packages=['polymorphic_sqlalchemy'],
       zip_safe=False,
       test_suite="tests",
-      tests_require=['Flask==0.12.2',
-                     'Flask-SQLAlchemy==2.1',
-                     'pytest==3.0.6', ],
+      tests_require=['Flask==1.0.3',
+                     'Flask-SQLAlchemy==2.4.0',
+                     'pytest==4.5.0', ],
       long_description=long_description,
       install_requires=[
           'SQLAlchemy',
